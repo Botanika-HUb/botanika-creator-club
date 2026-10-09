@@ -6,12 +6,23 @@
 ## Onde estamos
 
 - **Fase atual:** Lançamento 1 (creators já ativas da Botanika) → E1 Base do projeto
-- **Próxima tarefa:** E1.4 está bloqueada (contas Supabase e Vercel). Aguardando decisão: liberar as contas ou adiantar uma tarefa que não depende delas.
+- **Próxima tarefa:** E0.1 — inventário do app antigo no Supabase (só leitura). Depois E1.4 (aguarda D-INFRA).
 - **Bloqueios:** contas Supabase e Vercel da empresa (só para E1.4 em diante)
 
 ## Fila de tarefas (uma por vez, nesta ordem)
 
 Legenda: `[ ]` a fazer · `[~]` em andamento · `[x]` feito · `[!]` bloqueado
+
+### E0 — Inventário (só leitura; nada muda em produção)
+- [ ] **E0.1** Inventário do app antigo: o projeto Supabase `creator-hub` está **ativo** — levantar tabelas e
+  contagens (creators, cupons, saques, termos) sem alterar nada; conferir se há backup; registrar.
+- [ ] **E0.2** Lista de saques já pagos a cada creator, por qualquer meio. *Depende do Pagamento (Juci/Pâmela).*
+- [ ] **E0.3** Shopify da Botanika: scopes concedidos ao app atual, `taxesIncluded`, volume de pedidos com cupom.
+  *Depende de acesso de admin ao Shopify.*
+- [ ] **E0.4** Formulário do Vitor: onde roda e como pode enviar cadastros. *Depende do Vitor.*
+
+> E0 foi definida no plano como primeira etapa, mas ficou fora desta fila até 2026-10-09 (corrigido).
+> As tarefas E1.1–E1.3 já feitas não dependiam dela.
 
 ### E1 — Base do projeto
 - [x] **E1.1** Esqueleto Next.js (App Router, TypeScript, Tailwind) junto do núcleo de domínio; `npm test`, `npm run typecheck` e `npm run build` passando.

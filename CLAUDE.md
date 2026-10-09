@@ -6,7 +6,8 @@ Plano vivo: https://claude.ai/code/artifact/903360ba-744d-409e-97e8-dc11dbe57f52
 
 ## Como trabalhar neste repositório (obrigatório)
 
-1. **Antes de qualquer coisa**, ler `docs/PROGRESS.md` (onde estamos, próxima tarefa) e `docs/DECISIONS.md`.
+1. **Antes de qualquer coisa**, ler `docs/PROGRESS.md` (onde estamos, próxima tarefa), `docs/DECISIONS.md`
+   e, na primeira vez, `docs/CONTEXTO.md` (negócio, reunião, auditoria do app antigo, contas existentes).
 2. Fazer **só a próxima tarefa** da fila, uma por vez. Não puxar trabalho de fases seguintes.
 3. Toda tarefa termina com: testes e typecheck passando → `docs/PROGRESS.md` atualizado
    (marcar a tarefa, novo checkpoint `CP-NN` no topo da lista, próxima tarefa) → **um commit** → push.

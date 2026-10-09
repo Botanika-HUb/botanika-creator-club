@@ -36,3 +36,4 @@
 | D-NF | Código de serviço e descrição da NF | — | E8 |
 | D-MIN | R$ 500 é mínimo por solicitação | Sim, por solicitação | E8 |
 | D-ACCT | Donos das contas Supabase/Vercel | Contas da empresa, Pedro dono | E1.4 |
+| D-INFRA | Staging no Supabase Free + Vercel gratuito, ou plano pago desde o início? | Ver CONTEXTO.md (contas existentes). Free tem limite de 2 projetos ativos (já usados) e pausa após 7 dias sem uso; produção nunca em Free | E1.4 |
