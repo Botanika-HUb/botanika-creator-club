@@ -6,7 +6,7 @@
 ## Onde estamos
 
 - **Fase atual:** Lançamento 1 (creators já ativas da Botanika) → E1 Base do projeto
-- **Próxima tarefa:** E1.3 — CI no GitHub Actions (ver "Fila de tarefas")
+- **Próxima tarefa:** E1.4 — staging (bloqueada: contas Supabase e Vercel). Ver "Fila de tarefas".
 - **Bloqueios:** contas Supabase e Vercel da empresa (só para E1.4 em diante)
 
 ## Fila de tarefas (uma por vez, nesta ordem)
@@ -16,7 +16,7 @@ Legenda: `[ ]` a fazer · `[~]` em andamento · `[x]` feito · `[!]` bloqueado
 ### E1 — Base do projeto
 - [x] **E1.1** Esqueleto Next.js (App Router, TypeScript, Tailwind) junto do núcleo de domínio; `npm test`, `npm run typecheck` e `npm run build` passando.
 - [x] **E1.2** Schema Prisma do núcleo (Brand, BrandIntegration, User, RoleGrant, CreatorAccount, Creator, CommissionPolicy, Coupon, Order, OrderLine, OrderAttribution, LedgerEntry, Withdrawal, File, WebhookEvent, Job, SyncRun, AuditLog, Click) com migração inicial e restrições (únicos, FKs `Restrict`, índice parcial de saque aberto). Testes de integração contra Postgres local.
-- [ ] **E1.3** CI no GitHub Actions: instalar, typecheck, testes (com Postgres de serviço), build.
+- [x] **E1.3** CI no GitHub Actions: instalar, typecheck, testes (com Postgres de serviço), build.
 - [!] **E1.4** Staging: projeto Supabase (sa-east-1) e Vercel (gru1) em contas da empresa; deploy automático da `main`. *Bloqueado: contas.*
 
 ### Depois de E1 (detalhar quando chegar lá)
@@ -25,6 +25,13 @@ E6 Saldo de abertura e conferência · E7 Portal da creator · E8 Saques · E9 C
 Detalhe de cada uma no plano: https://claude.ai/code/artifact/903360ba-744d-409e-97e8-dc11dbe57f52
 
 ## Checkpoints (mais recente primeiro)
+
+### CP-04 — 2026-10-09 — CI no GitHub Actions (E1.3)
+- **Feito:** `.github/workflows/ci.yml` em todo push na `main` e em PR: `npm ci` (gera cliente Prisma),
+  typecheck, testes unitários, testes de integração com Postgres 16 de serviço, checagem de divergência
+  migração × schema (`prisma migrate diff --exit-code`) e build. Actions fixadas por hash de commit (v5, Node 24).
+- **Verificado:** YAML válido; passo de divergência testado localmente (sai 0 sem divergência, 2 com divergência).
+  Resultado da primeira execução no GitHub: ver CP-05 ou o histórico de Actions do repositório.
 
 ### CP-03 — 2026-10-09 — Schema do banco (E1.2)
 - **Feito:** Prisma 7.10.0 + `@prisma/adapter-pg`; schema com 20 tabelas do núcleo e migração `core`.
