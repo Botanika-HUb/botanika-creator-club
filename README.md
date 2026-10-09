@@ -4,8 +4,9 @@ Plataforma de gestão de creators da Botanika: vendas atribuídas por cupom, ext
 
 ## Estado
 
-Núcleo de domínio (`src/domain`) com as regras de dinheiro e testes. Ainda sem app web, banco ou integração
-com o Shopify: esses entram nas entregas E1–E3 do plano.
+Esqueleto do app Next.js (`src/app`) e núcleo de domínio (`src/domain`) com as regras de dinheiro e testes.
+Ainda sem banco, login ou integração com o Shopify: esses entram nas entregas E1.2–E3 do plano.
+Andamento detalhado em [`docs/PROGRESS.md`](docs/PROGRESS.md).
 
 | Módulo | O que faz |
 | --- | --- |
@@ -23,4 +24,6 @@ com o Shopify: esses entram nas entregas E1–E3 do plano.
 npm install
 npm test
 npm run typecheck
+npm run build
+npm run dev   # http://localhost:3000 · saúde em /api/health
 ```

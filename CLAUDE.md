@@ -50,8 +50,17 @@ Onboarding de novas creators, Hunter, UGC, alertas e Autentique vêm depois.
 
 ## Comandos
 
-- `npm test` — testes (Vitest)
-- `npm run typecheck` — checagem de tipos
+- `npm test` — testes (Vitest, pasta `test/`)
+- `npm run typecheck` — gera os tipos de rota do Next e roda `tsc`
+- `npm run build` — build de produção do Next
+- `npm run dev` — app local em http://localhost:3000
+
+## Stack fixada
+
+Next.js 16.3.8 (App Router, Turbopack), React 19.3.0, Tailwind 4, TypeScript 5.9, Vitest 3. Versões exatas no
+`package.json` (`--save-exact`). Antes de escrever código do Next, consultar a documentação da versão instalada em
+`node_modules/next/dist/docs/`: a API muda entre versões (ex.: `middleware` virou `proxy`).
+`next-env.d.ts` é gerado e fica fora do Git.
 
 ## Convenções
 
