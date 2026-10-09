@@ -4,6 +4,16 @@ Plataforma própria de gestão de creators da Botanika (multi-marca; só Botanik
 Sistema separado do AllianceOS; depois compartilha dados com ele por eventos.
 Plano vivo: https://claude.ai/code/artifact/903360ba-744d-409e-97e8-dc11dbe57f52
 
+## Como trabalhar neste repositório (obrigatório)
+
+1. **Antes de qualquer coisa**, ler `docs/PROGRESS.md` (onde estamos, próxima tarefa) e `docs/DECISIONS.md`.
+2. Fazer **só a próxima tarefa** da fila, uma por vez. Não puxar trabalho de fases seguintes.
+3. Toda tarefa termina com: testes e typecheck passando → `docs/PROGRESS.md` atualizado
+   (marcar a tarefa, novo checkpoint `CP-NN` no topo da lista, próxima tarefa) → **um commit** → push.
+4. Decisão nova ou mudada vai para `docs/DECISIONS.md` no mesmo commit.
+5. Regra de negócio que não está nos documentos: perguntar, não inventar.
+6. O repositório é a memória do projeto. O que não está aqui não aconteceu.
+
 ## Escopo atual (lançamento 1)
 
 Creators **já ativas** da Botanika: portal com vendas, saldo correto, extrato, cupom, link e saque.
