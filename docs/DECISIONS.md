@@ -16,6 +16,8 @@
 | D-RATECHG | 2026-10-08 | Mudança de taxa vale só para pedidos pagos depois dela. | Plano |
 | D-AUTH | 2026-10-08 | Login por convite (Supabase Auth); sem "reivindicar cupom"; "entrar como" fora do escopo. | Plano |
 | D-ORDERS | 2026-10-09 | Guardar **todos** os pedidos (poucos campos), não só os com cupom. | Plano |
+| D-INTCENTS | 2026-10-09 | Valores em `Int` (32 bits) de centavos: até R$ 21,4 milhões por linha, suficiente para pedido, lançamento e saque. Somas são feitas em SQL. Rever se algum valor individual puder passar disso. | Técnica |
+| D-COUPONOWNER | 2026-10-09 | Cupom (código único por marca) separado de `CouponAssignment` (dona com vigência, sem sobreposição): troca de dona não reescreve o passado. | Técnica |
 | D-QUEUE | 2026-10-09 | Webhook grava evento + tarefa no Postgres na mesma transação antes de responder; worker processa. | Plano |
 
 ## Em aberto (usar a proposta até haver resposta; marcar no código `// DECISÃO-ABERTA: <id>`)

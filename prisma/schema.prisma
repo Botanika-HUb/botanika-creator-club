@@ -1,0 +1,531 @@
+// Creator Club v2 — schema do núcleo (lançamento 1).
+//
+// Regras que valem para todo o schema:
+//  - Dinheiro em centavos (Int) e taxas em pontos-base (1500 = 15%). Nunca Float.
+//  - Nada financeiro é apagado: relações com onDelete: Restrict; status no lugar de exclusão.
+//  - Tudo que pertence a uma marca carrega brandId. Relações financeiras usam FK composta
+//    (id, brandId) para impedir misturar registros de marcas diferentes.
+//  - Travas que o Prisma não expressa (CHECKs, exclusão de sobreposição, extrato só de
+//    inserção, um saque aberto por creator, unicidade com NULL) estão em SQL na migração
+//    prisma/migrations/*_core/migration.sql.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Marca e integrações ─────────────────────────────
+
+model Brand {
+  id                       String   @id @default(uuid())
+  slug                     String   @unique
+  name                     String
+  enabled                  Boolean  @default(false)
+  timezone                 String   @default("America/Sao_Paulo")
+  currency                 String   @default("BRL")
+  storeUrl                 String?
+  primaryColor             String   @default("#2f6b3f")
+  defaultCommissionBps     Int      @default(1500) // DECISÃO-ABERTA: D-RATE
+  defaultDiscountBps       Int      @default(500)
+  withdrawalMinCents       Int      @default(50000)
+  withdrawalWindowStartDay Int      @default(10)
+  withdrawalWindowEndDay   Int      @default(15)
+  commissionHoldDays       Int      @default(0) // DECISÃO-ABERTA: D-HOLD
+  nfInstructions           String?
+  legacyId                 String?  @unique
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  integrations       BrandIntegration[]
+  roleGrants         RoleGrant[]
+  creators           Creator[]
+  commissionPolicies CommissionPolicy[]
+  coupons            Coupon[]
+  couponAssignments  CouponAssignment[]
+  orders             Order[]
+  orderLines         OrderLine[]
+  attributions       OrderAttribution[]
+  ledgerEntries      LedgerEntry[]
+  withdrawals        Withdrawal[]
+  files              File[]
+  webhookEvents      WebhookEvent[]
+  jobs               Job[]
+  syncRuns           SyncRun[]
+  auditLogs          AuditLog[]
+  clicks             Click[]
+}
+
+enum IntegrationKind {
+  SHOPIFY
+  AUTENTIQUE
+  WHATSAPP
+}
+
+enum IntegrationStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+}
+
+/// Credenciais por marca. Segredos sempre cifrados pela aplicação (AES-256-GCM) com chave fora do banco.
+model BrandIntegration {
+  id              String            @id @default(uuid())
+  brandId         String
+  kind            IntegrationKind
+  status          IntegrationStatus @default(DISCONNECTED)
+  externalId      String? // ex.: botanika-brasil.myshopify.com
+  secretEncrypted String?
+  scopes          String?
+  apiVersion      String?
+  lastSyncAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Restrict)
+
+  @@unique([brandId, kind])
+}
+
+// ───────────────────────────── Pessoas e acesso ─────────────────────────────
+
+/// Pessoa que faz login (equipe ou creator). id = id do usuário no Supabase Auth.
+model User {
+  id         String    @id
+  email      String    @unique
+  name       String
+  disabledAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  roleGrants     RoleGrant[]
+  creatorAccount CreatorAccount?
+}
+
+enum StaffRole {
+  SUPER_ADMIN
+  GESTAO
+  ENVIO
+  PAGAMENTO
+  HUNTER
+}
+
+/// Papel de alguém da equipe numa marca. brandId nulo = todas as marcas (só SUPER_ADMIN).
+/// Papel global (brandId nulo) único por pessoa: índice parcial na migração.
+model RoleGrant {
+  id        String    @id @default(uuid())
+  userId    String
+  brandId   String?
+  role      StaffRole
+  createdAt DateTime  @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  brand Brand? @relation(fields: [brandId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, brandId, role])
+  @@index([userId])
+}
+
+/// Dados da pessoa creator, únicos para todas as marcas.
+model CreatorAccount {
+  id        String   @id @default(uuid())
+  userId    String?  @unique // preenchido quando o convite é aceito
+  name      String
+  email     String   @unique
+  phone     String?
+  cpf       String?
+  cnpj      String?
+  pixKey    String?
+  legacyId  String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  creators Creator[]
+}
+
+enum CreatorCategory {
+  INFLUENCER
+  UGC
+  PRESCRITOR
+}
+
+enum CreatorStatus {
+  ACTIVE
+  INACTIVE
+  DEACTIVATED
+}
+
+/// Participação de uma pessoa numa marca.
+model Creator {
+  id            String            @id @default(uuid())
+  brandId       String
+  accountId     String
+  categories    CreatorCategory[]
+  status        CreatorStatus     @default(ACTIVE)
+  activatedAt   DateTime?
+  deactivatedAt DateTime?
+  source        String? // hunter | site | instagram | legacy_import
+  legacyId      String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  brand              Brand              @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  account            CreatorAccount     @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  commissionPolicies CommissionPolicy[]
+  couponAssignments  CouponAssignment[]
+  attributions       OrderAttribution[]
+  ledgerEntries      LedgerEntry[]
+  withdrawals        Withdrawal[]
+
+  @@unique([brandId, accountId])
+  @@unique([id, brandId])
+  @@unique([brandId, legacyId])
+  @@index([brandId, status])
+}
+
+/// Taxa de comissão com vigência [validFrom, validTo). Sem sobreposição por creator (EXCLUDE na migração).
+model CommissionPolicy {
+  id          String    @id @default(uuid())
+  brandId     String
+  creatorId   String
+  rateBps     Int
+  validFrom   DateTime
+  validTo     DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+
+  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  creator Creator @relation(fields: [creatorId, brandId], references: [id, brandId], onDelete: Restrict)
+
+  @@index([creatorId, validFrom])
+}
+
+// ───────────────────────────── Cupons ─────────────────────────────
+
+enum CouponKind {
+  CREATOR
+  PROMO
+}
+
+/// Todo cupom conhecido da marca. O código é único por marca; a dona muda por CouponAssignment.
+model Coupon {
+  id          String     @id @default(uuid())
+  brandId     String
+  code        String // sempre em maiúsculas
+  kind        CouponKind
+  shopifyId   String?
+  discountBps Int?
+  active      Boolean    @default(true)
+  legacyId    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  brand        Brand              @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  assignments  CouponAssignment[]
+  attributions OrderAttribution[]
+  clicks       Click[]
+
+  @@unique([brandId, code])
+  @@unique([id, brandId])
+}
+
+/// De quem é um cupom CREATOR em cada período [validFrom, validTo). Sem sobreposição (EXCLUDE na migração).
+model CouponAssignment {
+  id          String    @id @default(uuid())
+  brandId     String
+  couponId    String
+  creatorId   String
+  validFrom   DateTime
+  validTo     DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+
+  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  coupon  Coupon  @relation(fields: [couponId, brandId], references: [id, brandId], onDelete: Restrict)
+  creator Creator @relation(fields: [creatorId, brandId], references: [id, brandId], onDelete: Restrict)
+
+  @@index([couponId, validFrom])
+  @@index([creatorId])
+}
+
+// ───────────────────────────── Pedidos ─────────────────────────────
+
+/// Espelho do pedido do Shopify. Todos os pedidos da loja, com poucos campos.
+model Order {
+  id               String    @id @default(uuid())
+  brandId          String
+  shopifyId        String // gid://shopify/Order/…
+  name             String // #1234
+  createdAtShop    DateTime
+  paidAt           DateTime?
+  cancelledAt      DateTime?
+  financialStatus  String
+  test             Boolean   @default(false)
+  taxesIncluded    Boolean?
+  subtotalCents    Int // currentSubtotalPriceSet: produtos, com descontos e reembolsos, sem frete
+  totalCents       Int
+  currency         String    @default("BRL")
+  discountCodes    String[]
+  shopifyUpdatedAt DateTime // versão desta foto do pedido
+  syncedAt         DateTime  @default(now())
+
+  brand         Brand             @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  lines         OrderLine[]
+  attribution   OrderAttribution?
+  ledgerEntries LedgerEntry[]
+
+  @@unique([brandId, shopifyId])
+  @@unique([id, brandId])
+  @@index([brandId, shopifyUpdatedAt])
+  @@index([brandId, createdAtShop])
+}
+
+model OrderLine {
+  id                   String @id @default(uuid())
+  brandId              String
+  orderId              String
+  shopifyId            String
+  title                String
+  quantity             Int
+  discountedTotalCents Int
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  order Order @relation(fields: [orderId, brandId], references: [id, brandId], onDelete: Restrict)
+
+  @@unique([orderId, shopifyId])
+}
+
+/// A qual creator o pedido pertence. Decidida uma vez (regra first_creator_code_v1).
+/// rateBps é preenchido quando o pedido é pago (taxa vigente no pagamento) e não muda depois.
+model OrderAttribution {
+  id            String   @id @default(uuid())
+  brandId       String
+  orderId       String   @unique
+  creatorId     String
+  couponId      String
+  rateBps       Int?
+  rule          String
+  evidenceCodes String[]
+  decidedAt     DateTime @default(now())
+
+  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  order   Order   @relation(fields: [orderId, brandId], references: [id, brandId], onDelete: Restrict)
+  creator Creator @relation(fields: [creatorId, brandId], references: [id, brandId], onDelete: Restrict)
+  coupon  Coupon  @relation(fields: [couponId, brandId], references: [id, brandId], onDelete: Restrict)
+
+  @@unique([orderId, brandId])
+  @@index([brandId, creatorId])
+}
+
+// ───────────────────────────── Extrato e saques ─────────────────────────────
+
+enum LedgerType {
+  COMMISSION
+  REVERSAL
+  WITHDRAWAL
+  ADJUSTMENT
+  OPENING_BALANCE
+}
+
+/// Cada centavo que entra ou sai do saldo. Só recebe inserções (trigger na migração).
+model LedgerEntry {
+  id             String     @id @default(uuid())
+  brandId        String
+  creatorId      String
+  type           LedgerType
+  amountCents    Int // com sinal
+  orderId        String?
+  withdrawalId   String?
+  baseCents      Int?
+  rateBps        Int?
+  availableAt    DateTime
+  idempotencyKey String     @unique
+  note           String?
+  createdById    String?
+  createdAt      DateTime   @default(now())
+
+  brand      Brand       @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  creator    Creator     @relation(fields: [creatorId, brandId], references: [id, brandId], onDelete: Restrict)
+  order      Order?      @relation(fields: [orderId, brandId], references: [id, brandId], onDelete: Restrict)
+  withdrawal Withdrawal? @relation(fields: [withdrawalId, brandId], references: [id, brandId], onDelete: Restrict)
+
+  @@index([brandId, creatorId, createdAt])
+  @@index([orderId])
+}
+
+enum PaymentMethod {
+  NF_PIX
+  ALELO
+}
+
+enum WithdrawalStatus {
+  REQUESTED
+  PAID
+  REJECTED
+  CANCELLED
+}
+
+/// Pedido de saque. No máximo um REQUESTED por creator (índice parcial na migração).
+model Withdrawal {
+  id             String           @id @default(uuid())
+  brandId        String
+  creatorId      String
+  amountCents    Int
+  method         PaymentMethod    @default(NF_PIX)
+  status         WithdrawalStatus @default(REQUESTED)
+  nfFileId       String?
+  idempotencyKey String           @unique
+  requestedAt    DateTime         @default(now())
+  decidedAt      DateTime?
+  decidedById    String?
+  note           String?
+
+  brand         Brand         @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  creator       Creator       @relation(fields: [creatorId, brandId], references: [id, brandId], onDelete: Restrict)
+  nfFile        File?         @relation(fields: [nfFileId], references: [id], onDelete: Restrict)
+  ledgerEntries LedgerEntry[]
+
+  @@unique([id, brandId])
+  @@index([brandId, status])
+  @@index([creatorId])
+}
+
+/// Arquivo no Storage privado (NF, contrato, vídeo UGC).
+model File {
+  id           String   @id @default(uuid())
+  brandId      String
+  bucket       String
+  path         String
+  mime         String
+  sizeBytes    Int
+  sha256       String
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  brand       Brand        @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  withdrawals Withdrawal[]
+
+  @@unique([bucket, path])
+}
+
+// ───────────────────────────── Operação ─────────────────────────────
+
+enum WebhookStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+/// Todo webhook recebido, gravado antes de responder. X-Shopify-Webhook-Id repetido é ignorado.
+model WebhookEvent {
+  id          String        @id @default(uuid())
+  brandId     String
+  topic       String
+  webhookId   String
+  resourceId  String?
+  payloadHash String
+  status      WebhookStatus @default(RECEIVED)
+  attempts    Int           @default(0)
+  error       String?
+  receivedAt  DateTime      @default(now())
+  processedAt DateTime?
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Restrict)
+
+  @@unique([brandId, webhookId])
+  @@index([status, receivedAt])
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+/// Fila de trabalho no Postgres (o webhook grava evento + job na mesma transação).
+model Job {
+  id          String    @id @default(uuid())
+  brandId     String?
+  type        String
+  payload     Json
+  dedupeKey   String?   @unique
+  status      JobStatus @default(PENDING)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(8)
+  runAt       DateTime  @default(now())
+  lockedUntil DateTime?
+  lockedBy    String?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  finishedAt  DateTime?
+
+  brand Brand? @relation(fields: [brandId], references: [id], onDelete: Restrict)
+
+  @@index([status, runAt])
+}
+
+/// Histórico de cargas e reconciliações com o Shopify.
+model SyncRun {
+  id          String    @id @default(uuid())
+  brandId     String
+  kind        String // incremental | nightly | backfill
+  cursor      DateTime?
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  ordersSeen  Int       @default(0)
+  ordersFixed Int       @default(0)
+  error       String?
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Restrict)
+
+  @@index([brandId, startedAt])
+}
+
+enum ActorType {
+  USER
+  SYSTEM
+  WEBHOOK
+  JOB
+}
+
+/// Quem mudou o quê. Só recebe inserções (trigger na migração).
+model AuditLog {
+  id        String    @id @default(uuid())
+  brandId   String?
+  actorType ActorType
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String
+  before    Json?
+  after     Json?
+  createdAt DateTime  @default(now())
+
+  brand Brand? @relation(fields: [brandId], references: [id], onDelete: Restrict)
+
+  @@index([brandId, createdAt])
+  @@index([entity, entityId])
+}
+
+/// Clique no link de afiliado /r/<marca>/<cupom>.
+model Click {
+  id        String   @id @default(uuid())
+  brandId   String
+  couponId  String
+  ipHash    String?
+  userAgent String?
+  referrer  String?
+  landing   String?
+  createdAt DateTime @default(now())
+
+  brand  Brand  @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  coupon Coupon @relation(fields: [couponId, brandId], references: [id, brandId], onDelete: Restrict)
+
+  @@index([couponId, createdAt])
+}

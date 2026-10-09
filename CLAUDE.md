@@ -50,7 +50,10 @@ Onboarding de novas creators, Hunter, UGC, alertas e Autentique vêm depois.
 
 ## Comandos
 
-- `npm test` — testes (Vitest, pasta `test/`)
+- `npm test` — testes unitários (Vitest, `test/*.test.ts`, sem banco)
+- `npm run test:integration` — testes contra Postgres real (`test/integration/`); exige `TEST_DATABASE_URL`.
+  Cada execução cria um schema descartável, aplica as migrações reais e apaga no fim.
+- `npm run db:migrate` — aplica migrações (`prisma migrate deploy`); `npm run db:generate` — gera o cliente
 - `npm run typecheck` — gera os tipos de rota do Next e roda `tsc`
 - `npm run build` — build de produção do Next
 - `npm run dev` — app local em http://localhost:3000
@@ -61,6 +64,17 @@ Next.js 16.3.8 (App Router, Turbopack), React 19.3.0, Tailwind 4, TypeScript 5.9
 `package.json` (`--save-exact`). Antes de escrever código do Next, consultar a documentação da versão instalada em
 `node_modules/next/dist/docs/`: a API muda entre versões (ex.: `middleware` virou `proxy`).
 `next-env.d.ts` é gerado e fica fora do Git.
+
+## Banco (Prisma 7)
+
+- Prisma 7.10.0 com `@prisma/adapter-pg`; cliente gerado em `src/generated/prisma` (fora do Git, gerado no
+  `postinstall`). Conexão do app em `src/lib/db.ts`. Configuração em `prisma.config.ts` (URL vem de `DATABASE_URL`).
+- Travas que o Prisma não expressa ficam em SQL no fim da migração (`CHECK`, `EXCLUDE` contra sobreposição de
+  vigência, índices parciais, gatilhos de "somente inserção"). Toda trava nova ganha teste de integração que
+  exige o **nome** da trava no erro (`expectDbError`).
+- Depois de mudar o schema: `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script`
+  num banco recém-migrado precisa sair vazio (sem divergência).
+- `prisma migrate reset` é bloqueado quando roda pelo Claude. Para recomeçar do zero localmente, criar um banco novo.
 
 ## Convenções
 
