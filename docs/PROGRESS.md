@@ -6,7 +6,7 @@
 ## Onde estamos
 
 - **Fase atual:** Lançamento 1 (creators já ativas da Botanika) → E1 Base do projeto
-- **Próxima tarefa:** E1.4 — staging (bloqueada: contas Supabase e Vercel). Ver "Fila de tarefas".
+- **Próxima tarefa:** E1.4 está bloqueada (contas Supabase e Vercel). Aguardando decisão: liberar as contas ou adiantar uma tarefa que não depende delas.
 - **Bloqueios:** contas Supabase e Vercel da empresa (só para E1.4 em diante)
 
 ## Fila de tarefas (uma por vez, nesta ordem)
@@ -31,7 +31,9 @@ Detalhe de cada uma no plano: https://claude.ai/code/artifact/903360ba-744d-409e
   typecheck, testes unitários, testes de integração com Postgres 16 de serviço, checagem de divergência
   migração × schema (`prisma migrate diff --exit-code`) e build. Actions fixadas por hash de commit (v5, Node 24).
 - **Verificado:** YAML válido; passo de divergência testado localmente (sai 0 sem divergência, 2 com divergência).
-  Resultado da primeira execução no GitHub: ver CP-05 ou o histórico de Actions do repositório.
+  Primeira execução no GitHub (run 37942062366, commit `30daa74`): **verde em todos os passos**, ~1 min.
+  O log do Postgres do runner mostra cada trava disparando nos testes (somente inserção, sinal por tipo,
+  FK por marca, saque aberto único, sobreposição de vigência, papéis).
 
 ### CP-03 — 2026-10-09 — Schema do banco (E1.2)
 - **Feito:** Prisma 7.10.0 + `@prisma/adapter-pg`; schema com 20 tabelas do núcleo e migração `core`.
